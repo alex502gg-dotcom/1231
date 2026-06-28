@@ -1,0 +1,32 @@
+name: ThreeXThreePickaxe
+version: 1.2.0
+main: ru.example.threexthree.ThreeXThreePlugin
+api-version: '1.21'
+author: Claude
+description: Кастомная кирка, которая ломает блоки областью 3x3, 5x5 или 9x9 в зависимости от выбранного радиуса
+
+# WorldGuard необязателен: без него кирка работает в обычном режиме,
+# при наличии — учитывает список allowed-regions из config.yml
+softdepend:
+  - WorldGuard
+
+commands:
+  3x3:
+    description: Выдаёт кирку с областью добычи выбранного размера
+    usage: "/<command> <wooden|stone|iron|golden|diamond|netherite> <3|5|9> [игрок]"
+    permission: threexthree.give
+  3x3reload:
+    description: Перечитывает config.yml плагина без перезапуска сервера
+    usage: "/<command>"
+    permission: threexthree.reload
+
+permissions:
+  threexthree.give:
+    description: Позволяет получать кирку 3x3/5x5/9x9 себе
+    default: op
+  threexthree.give.others:
+    description: Позволяет выдавать кирку другим игрокам
+    default: op
+  threexthree.reload:
+    description: Позволяет перечитывать config.yml плагина
+    default: op
