@@ -80,8 +80,13 @@ public class MineListener implements Listener {
         this.breakSoundEnabled = config.getBoolean("break-sound.enabled", true);
         String soundName = config.getString("break-sound.sound", "ENTITY_ITEM_BREAK");
         try {
-            this.breakSound = Sound.valueOf(soundName.toUpperCase());
-        } catch (IllegalArgumentException e) {
+            org.bukkit.NamespacedKey soundKey = org.bukkit.NamespacedKey.minecraft(soundName.toLowerCase().replace(".", "_"));
+            Sound found = org.bukkit.Registry.SOUNDS.get(soundKey);
+            this.breakSound = (found != null) ? found : Sound.ENTITY_ITEM_BREAK;
+            if (found == null) {
+                plugin.getLogger().warning("Неизвестный звук в break-sound.sound: " + soundName + ", использую ENTITY_ITEM_BREAK");
+            }
+        } catch (Exception e) {
             plugin.getLogger().warning("Неизвестный звук в break-sound.sound: " + soundName + ", использую ENTITY_ITEM_BREAK");
             this.breakSound = Sound.ENTITY_ITEM_BREAK;
         }
@@ -174,7 +179,7 @@ public class MineListener implements Listener {
 
             // UUID игрока для проверки owner/member
             com.sk89q.worldguard.LocalPlayer wgPlayer =
-                    WorldGuard.getInstance().getPlatform().getMatcher().getPlayer(BukkitAdapter.adapt(player));
+                    com.sk89q.worldguard.bukkit.WorldGuardPlugin.inst().wrapPlayer(player);
 
             // Получаем все регионы, в которых находится блок (кроме __global__)
             java.util.List<ProtectedRegion> regions = new java.util.ArrayList<>();
