@@ -137,7 +137,7 @@ public class MineListener implements Listener {
             if (currentTool.getType() == Material.AIR) break;
 
             // Проверяем регионы WorldGuard напрямую, без фейкового BlockBreakEvent
-            BlockRegionResult regionResult = checkRegion(block);
+            BlockRegionResult regionResult = checkRegion(block, player);
             if (regionResult == BlockRegionResult.BLOCKED) {
                 if (!regionMessageSent) {
                     player.sendMessage(ChatColor.translateAlternateColorCodes('&', regionBlockedMessage));
@@ -154,10 +154,10 @@ public class MineListener implements Listener {
      * Проверяет, можно ли ломать блок с точки зрения регионов WorldGuard.
      *
      * Возвращает:
-     *   ALLOWED  — регион разрешён конфигом или WorldGuard не установлен
-     *   BLOCKED  — блок находится в регионе, которого нет в allowed-regions
+     *   ALLOWED  — регион разрешён конфигом, игрок owner/member, или WorldGuard не установлен
+     *   BLOCKED  — блок находится в чужом регионе, которого нет в allowed-regions
      */
-    private BlockRegionResult checkRegion(Block block) {
+    private BlockRegionResult checkRegion(Block block, Player player) {
         // Если WorldGuard не установлен — разрешаем всё
         if (!isWorldGuardEnabled()) return BlockRegionResult.ALLOWED;
 
@@ -172,6 +172,10 @@ public class MineListener implements Listener {
             com.sk89q.worldedit.math.BlockVector3 pos =
                     com.sk89q.worldedit.math.BlockVector3.at(block.getX(), block.getY(), block.getZ());
 
+            // UUID игрока для проверки owner/member
+            com.sk89q.worldguard.LocalPlayer wgPlayer =
+                    WorldGuard.getInstance().getPlatform().getMatcher().getPlayer(BukkitAdapter.adapt(player));
+
             // Получаем все регионы, в которых находится блок (кроме __global__)
             java.util.List<ProtectedRegion> regions = new java.util.ArrayList<>();
             for (ProtectedRegion region : manager.getApplicableRegions(pos)) {
@@ -183,14 +187,15 @@ public class MineListener implements Listener {
             // Блок вне каких-либо регионов (не считая __global__) — разрешаем
             if (regions.isEmpty()) return BlockRegionResult.ALLOWED;
 
-            // Хотя бы один регион должен совпасть с белым списком
             for (ProtectedRegion region : regions) {
-                if (matchesAnyPattern(region.getId())) {
-                    return BlockRegionResult.ALLOWED;
-                }
+                // Разрешён по белому списку паттернов
+                if (matchesAnyPattern(region.getId())) return BlockRegionResult.ALLOWED;
+
+                // Игрок является владельцем или участником этого региона
+                if (region.isOwner(wgPlayer) || region.isMember(wgPlayer)) return BlockRegionResult.ALLOWED;
             }
 
-            // Ни один регион не в белом списке — блокируем
+            // Ни один регион не разрешён — блокируем
             return BlockRegionResult.BLOCKED;
 
         } catch (Exception e) {
